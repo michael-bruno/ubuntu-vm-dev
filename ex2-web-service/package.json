@@ -1,15 +1,14 @@
 {
-  "name": "express-handlebars-basic-example",
-  "version": "0.0.0",
+  "name": "ubuntu-vm-dev",
+  "version": "1.0.0",
   "description": "",
-  "private": true,
-  "main": "server.js",
+  "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node index.js"
   },
-  "author": "Michael Bruno",
-  "license": "BSD",
+  "author": "",
+  "license": "ISC",
   "dependencies": {
     "express": "^4.7.2",
     "express-handlebars": "*"
