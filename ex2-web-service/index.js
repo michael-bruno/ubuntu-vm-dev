@@ -43,20 +43,21 @@ app.post('/registrations', function(req, res) {
     let shirtSize = req.body.shirtSize
     let hrUsername = req.body.hrUsername
     
-    let valid = ([firstName,lastName,grade,email,shirtSize,hrUsername].every(Boolean))
+    if (![firstName,lastName,grade,email,shirtSize,hrUsername].every(Boolean)) { return res.status(400).send("Missing required data field(s).") }
 
-    if (!valid) { return res.status(400).send("Missing required data field(s).") }
+    if (!["s","m","l"].includes(shirtSize.toLowerCase())) { return res.status(400).send(`'${shirtSize}' is not a valid shirt size.`) }
+    if (!["9","10","11","12"].includes(grade)) { return res.status(400).send(`'${grade}' is not a valid grade.`) }
 
     pool.getConnection(function(err, connection) {
-        if (err) { return res.status(503).send("An error has occured: " + err) }
+        if (err) { return res.status(500).send("An error has occured: " + err) }
 
-        let query = "insert into registrations.contestant(firstName, lastName, grade, email, shirtSize, hrUsername) values (?,?,?,?,?,?)"
         let values = [firstName,lastName,grade,email,shirtSize,hrUsername]
-
+        
+        let query = "insert into registrations.contestant(firstName, lastName, grade, email, shirtSize, hrUsername) values (?,?,?,?,?,?)"
         connection.query(query,values,function (err, results) {
             if (err) { return res.status(500).send("An error has occured: " + err) }
             
-            res.status(200).send("OK")
+            res.status(200).send("Record successfully inserted.")
             print("Record successfully inserted.")
             connection.release()
         });
