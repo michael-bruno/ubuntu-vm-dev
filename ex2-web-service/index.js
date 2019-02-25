@@ -1,11 +1,13 @@
 'use strict';
 
+let PORT = 3000
+
 function print(str) { console.log(str) }
 
 let bodyParser = require('body-parser')
 let mysql = require("mysql")
 let express = require('express'),
-    exphbs  = require('express-handlebars') // "express-handlebars"
+    exphbs = require('express-handlebars')
 
 let pool = mysql.createPool({    
     "host": "localhost",
@@ -19,7 +21,7 @@ let app = express()
 app.use(bodyParser.urlencoded({ extended: false }))
 app.use(bodyParser.json())
 
-app.engine('handlebars', exphbs({defaultLayout: 'main'}));
+app.engine('handlebars', exphbs({defaultLayout: 'main'}))
 app.set('view engine', 'handlebars');
 
 app.get('/registrations', function (req, res) {
@@ -55,12 +57,12 @@ app.post('/registrations', function(req, res) {
             if (err) { return res.status(500).send("An error has occured: " + err) }
             
             res.status(200).send("OK")
-            print("1 record inserted.")
+            print("Record successfully inserted.")
             connection.release()
         });
     });
 })
 
-app.listen(3000, function() {
-    print('Listening on 3000.')
+app.listen(PORT, function() {
+    print(`Listening on ${PORT}.`)
 })
