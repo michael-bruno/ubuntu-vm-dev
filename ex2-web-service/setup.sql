@@ -1,5 +1,5 @@
-create database registrations;
-use registrations;
+--create database registrations;
+--use registrations;
 
 create table Contestant
 (

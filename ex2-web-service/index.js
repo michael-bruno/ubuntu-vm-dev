@@ -12,7 +12,7 @@ let express = require('express'),
 let pool = mysql.createPool({    
     "host": "localhost",
     "user": "root",
-    "password": "797Spin797!",
+    "password": "797Spin797",
     "database": "registrations",
     "connectionLimit": 10
 })
