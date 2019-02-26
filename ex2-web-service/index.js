@@ -28,7 +28,7 @@ app.get('/registrations', function (req, res) {
     pool.getConnection(function(err, connection) {
         if (err) { return res.send("An error has occured: " + err)  }
 
-        connection.query("select * from registrations.contestant", function (err, results) {
+        connection.query("select * from registrations.Contestant", function (err, results) {
             res.send(results)
             connection.release()
         })
@@ -53,7 +53,7 @@ app.post('/registrations', function(req, res) {
 
         let values = [firstName,lastName,grade,email,shirtSize,hrUsername]
         
-        let query = "insert into registrations.contestant(firstName, lastName, grade, email, shirtSize, hrUsername) values (?,?,?,?,?,?)"
+        let query = "insert into registrations.Contestant(firstName, lastName, grade, email, shirtSize, hrUsername) values (?,?,?,?,?,?)"
         connection.query(query,values,function (err, results) {
             if (err) { return res.status(500).send("An error has occured: " + err) }
             
