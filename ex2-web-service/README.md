@@ -2,8 +2,6 @@
 
 ## Curl Commands
 
-hello cody
-
 Display existing data
 * curl -X GET http://172.31.95.166:3000/registrations
 
