@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<HTML>
+  <HEAD>
+    <title>Backwater Creek Community Library - Simple Search</title>
+    <LINK href="res/styles.css" type="text/css" rel="stylesheet">
+
+  </HEAD>
+  <body link="#660000">
+<!-- begin header -->
+<table width="100%" border="0">
+	<tr>
+		<td bgColor="#333333" colSpan="2">
+			<font face="arial, helvetica" color="#ffffff">Backwater Creek Community</font>
+		</td>
+	</tr>
+
+	<tr>
+		<td vAlign="top">&nbsp;<a href="search.html">Search</a> | <a href="mobile_search.html">Mobile</a> | <a href="login.html">Login</a></td>
+		<td align="right">
+			<IMG alt="Backwater Creek Community" src="res/logo.jpg">
+		</td>
+	</tr>
+</table>
+<!-- end header -->
+    <form method="get" action="search" >
+
+      <P>Search by Title:
+        <input name="Title" type="text" value=""  />&nbsp;<input type="submit" name="btnSearch" value="Search" />&nbsp;
+      </P>
+
+      <P><a href="search?start=0">&lt;&lt;&nbsp;Prev</a> Page _ of _ (_ matches) <a href="search?start=0">Next&nbsp;&gt;&gt;</a></P>
+
+      <P><table id="tblResults" cellspacing="0" cellpadding="5" align="Left" bordercolor="Gray" border="0">
+	<tr>
+		<td align="Left" valign="Top" width="25%"><b>Author</b></td><td align="Left" valign="Top" width="75%"><b>Title</b></td>
+
+		{{#each results}}
+			<tr>
+				<td align="Left" valign="Top"> {{this.author}} </td>
+				<td align="Left" valign="Top"><a href='details.html?book_id={{this.id}}' alt=''> {{this.title}} </a></td>
+			</tr>
+		{{/each}}
+
+	</tr>
+</table>
+      <br>
+      <br>
+      <P>&nbsp;</P>
+      <P>&nbsp;</P>
+
+      <P>&nbsp;</P>
+      <P>&nbsp;</P>
+    </form>
+  </body>
+</HTML>
