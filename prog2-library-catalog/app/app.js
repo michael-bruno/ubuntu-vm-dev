@@ -13,6 +13,7 @@ var routes = require('./routes/index');
 var app = express();
 
 // view engine setup
+app.engine('handlebars', expressHbs({defaultLayout: 'main'}));
 app.engine('.hbs', expressHbs({extname: '.hbs'}));
 app.set('view engine', '.hbs');
 
