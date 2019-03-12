@@ -39,7 +39,7 @@ Item.SearchAll = function (callback) {
 
 Item.Search = function (title,start,callback) {
     db.pool.getConnection(function (err, connection) {
-        connection.query('select id from items where title like ? order by title limit ? 10',title + "%",start, function (err, data) {
+        connection.query(`select id from items where title like ? order by title`,"%"+title+"%", function (err, data) {
     
             if (err) return callback(err)
 
@@ -49,19 +49,42 @@ Item.Search = function (title,start,callback) {
                     ids.push(i.id)
                 });
 
-                connection.query(`select * from items where id in (${ids}) order by title`,ids, function (err, data) {
+                connection.query(`select * from items where id in (${ids}) order by title limit ${start},10`,ids, function (err, data) {
                     let results = []
-                    for (var i = 0; i < data.length; ++i) {
-                        var item = data[i]
-                        results.push(new Item(item.ID, item.CALLNO, item.AUTHOR, item.TITLE, item.PUB_INFO,
-                            item.DESCRIPT, item.SERIES, item.ADD_AUTHOR, item.UPDATE_COUNT))
+                    if (data) {
+
+                        for (var i = 0; i < data.length; ++i) {
+                            var item = data[i]
+                            results.push(new Item(item.ID, item.CALLNO, item.AUTHOR, item.TITLE, item.PUB_INFO,
+                                item.DESCRIPT, item.SERIES, item.ADD_AUTHOR, item.UPDATE_COUNT))
+                            }
                     }
                     connection.release()
-                    return callback(null,results)
+                    return callback(null,results,ids.length)
                 })
             }
             else return callback(null,null)
         })
+    });
+}
+
+Item.SearchByID = function (id,callback) {
+    db.pool.getConnection(function (err, connection) {
+        connection.query('select * from items where id = (?)',id,function (err, data) {
+
+            connection.release()           
+            if (err) return callback(err);
+
+            if (data) {
+                let item = data[0]
+                let results = new Item(item.ID, item.CALLNO, item.AUTHOR, item.TITLE, item.PUB_INFO,
+                    item.DESCRIPT, item.SERIES, item.ADD_AUTHOR, item.UPDATE_COUNT)
+                callback(null, results)
+                }
+            else {
+                callback(null, null);
+            }
+        });
     });
 }
 

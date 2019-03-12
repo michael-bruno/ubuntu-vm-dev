@@ -1,21 +1,24 @@
-var express = require('express');
-var path = require('path');
-var favicon = require('serve-favicon');
-var logger = require('morgan');
-var cookieParser = require('cookie-parser');
-var bodyParser = require('body-parser');
-var expressHbs = require('express-handlebars');
-var session = require('express-session');
-var flash = require('connect-flash');
-var validator = require('express-validator');
-var routes = require('./routes/index');
+var express = require('express')
+var path = require('path')
+var favicon = require('serve-favicon')
+var logger = require('morgan')
+var cookieParser = require('cookie-parser')
+var bodyParser = require('body-parser')
+var expressHbs = require('express-handlebars')
+var session = require('express-session')
+var flash = require('connect-flash')
+var validator = require('express-validator')
+var routes = require('./routes/index')
 
-var app = express();
+var app = express()
 
 // view engine setup
-app.engine('handlebars', expressHbs({defaultLayout: 'main'}));
-app.engine('.hbs', expressHbs({extname: '.hbs'}));
-app.set('view engine', '.hbs');
+
+app.engine('.hbs', expressHbs({extname: '.hbs'}))
+app.engine('.hbs', expressHbs({defaultLayout: 'main'}))
+app.set('view engine', '.hbs')
+
+app.use(express.static('views/resc'))
 
 // uncomment after placing your favicon in /public
 //app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
