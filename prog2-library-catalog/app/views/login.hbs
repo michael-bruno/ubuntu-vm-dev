@@ -1,0 +1,25 @@
+<form method="post" action="login" >
+  <P>&nbsp;</P>
+
+  <P>&nbsp;</P>
+  <table cellpadding="5" cellspacing="5" align="center">
+    <tr>
+      <td valign="top" align="right"><b>Username:</b></td>
+      <td valign="top">
+        <input name="username" type="text" /></td>
+    </tr>
+    <tr>
+      <td valign="top" align="right"><b>Password:</b></td>
+      <td valign="top">
+        <input name="password" type="password"  /></td>
+    </tr>
+    <tr>
+      
+      <td colspan="2" valign="top" align="right"><input type="submit" name="login" value="Login"/></td>
+    </tr>
+    <tr>
+      <td valign="top" align="right"><b></b></td>
+      <td valign="top" align="right"><b>{{#if error}}<p style="color:#FF0000;">&nbsp;{{error}}</p>{{/if}}</b>
+    </tr>
+  </table>
+</form>

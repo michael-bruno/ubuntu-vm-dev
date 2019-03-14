@@ -37,9 +37,20 @@
       <td align="right" valign="top"><b>Subject Categories:</b></td>
       <td valign="top"></td>
     </tr>
+    <tr />
+    <tr>
+      <td align="right"> <input type="submit" name="maintain" value="Maintenance" />
+      <input type="submit" name="back" value="Back" formaction="search">
+        <input type="hidden" id="title" name="title" value="{{search_title}}">
+      </input>
+      </td>
+      <td> <b>{{#if success}}<p style="color:#008000;">{{success}}</p>{{/if}}</b></td>
+      
+    </tr>
 
   </table>
   <P>&nbsp;</P>
-  <P>
-    <input type="submit" name="maintain" value="Maintenance " /></P>
+  <input type="hidden" id="id_h" name="book_id" value="{{id}}">
+  <input type="hidden" id="uc_h" name="uc" value="{{update_count}}">
+
 </form>

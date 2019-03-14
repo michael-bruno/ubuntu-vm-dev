@@ -3,14 +3,14 @@
       <table>
 				<tr>
 					<td> <p> Search by Title: </p> </td>
-        	<td><input name="title" type="text" value="{{title}}"  />&nbsp;<input type="submit" name="search" value="Search" /></td>
-					<td>{{#if error}}<p style="color:#FF0000;">&nbsp;{{error}}</p>{{/if}} <td>
+        	<td><input name="title" type="text" value="{{item_search}}"  />&nbsp;<input type="submit" name="search" value="Search" /></td>
+					<td><b>{{#if error}}<p style="color:#FF0000;">&nbsp;{{error}}</p>{{/if}}</b><td>
 				</tr>
       </table>
 
-      <P><a href="search?start={{#if first}}0{{else}}{{prev_page}}{{/if}}&title={{title}}">&lt;&lt;&nbsp;Prev&nbsp;</a>
+      <P><a href="search?start={{#if first}}0{{else}}{{prev_page}}{{/if}}&title={{item_search}}">&lt;&lt;&nbsp;Prev&nbsp;</a>
 			Page {{on_page}} of {{pages}} ({{max}} matches)
-			<a href="search?start={{#if no_next}}{{start}}{{else}}{{next_page}}{{/if}}&title={{title}}">Next&nbsp;&gt;&gt;</a></P>
+			<a href="search?start={{#if no_next}}{{start}}{{else}}{{next_page}}{{/if}}&title={{item_search}}">Next&nbsp;&gt;&gt;</a></P>
 
       <P><table id="tblResults" cellspacing="0" cellpadding="5" align="Left" bordercolor="Gray" border="0">
 	<tr>
@@ -19,7 +19,7 @@
 		{{#each results}}
 			<tr>
 				<td align="Left" valign="Top"> {{this.author}} </td>
-				<td align="Left" valign="Top"><a href='details?book_id={{this.id}}' alt=''> {{this.title}} </a></td>
+				<td align="Left" valign="Top"><a href='details?book_id={{this.id}}&title={{../item_search}}' alt=''> {{this.title}} </a></td>
 			</tr>
 		{{/each}}
 	</tr>

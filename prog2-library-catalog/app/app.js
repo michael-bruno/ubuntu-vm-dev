@@ -1,16 +1,18 @@
-var express = require('express')
-var path = require('path')
-var favicon = require('serve-favicon')
-var logger = require('morgan')
-var cookieParser = require('cookie-parser')
-var bodyParser = require('body-parser')
-var expressHbs = require('express-handlebars')
-var session = require('express-session')
-var flash = require('connect-flash')
-var validator = require('express-validator')
-var routes = require('./routes/index')
+let express = require('express')
+let path = require('path')
+let favicon = require('serve-favicon')
+let logger = require('morgan')
+let cookieParser = require('cookie-parser')
+let bodyParser = require('body-parser')
+let expressHbs = require('express-handlebars')
+let session = require('express-session')
+let flash = require('connect-flash')
+let validator = require('express-validator')
+let routes = require('./routes/index')
+let parseurl = require('parseurl')
+let crypto = require('crypto')
 
-var app = express()
+let app = express()
 
 // view engine setup
 
@@ -22,23 +24,39 @@ app.use(express.static('views/resc'))
 
 // uncomment after placing your favicon in /public
 //app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
-app.use(logger('dev'));
-app.use(bodyParser.json());
+app.use(logger('dev'))
+app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: false }));
-app.use(validator());
-app.use(cookieParser());
-app.use(session({secret: 'mysupersecret', resave: false, saveUninitialized: false}));
-app.use(flash());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(validator())
+app.use(cookieParser())
+app.use(session({secret: 'mysupersecret', resave: false, saveUninitialized: false}))
+
+// Authentication middleware
+app.use(function(req,res,next) {
+  if (!req.session.paths) req.session.paths = []
+  req.session.paths.push(req.url)
+
+  if (req.session.user) return next()
+  
+  if (!req.url.includes("maintain")) return next()
+
+  res.redirect("login?error=You must login to edit entry")
+})
+
+// Configure HASH
+routes.secret = "library_catalog"
+
+app.use(flash())
+app.use(express.static(path.join(__dirname, 'public')))
 
 app.use('/', routes);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
-  var err = new Error('Not Found');
-  err.status = 404;
-  next(err);
-});
+  var err = new Error('Not Found')
+  err.status = 404
+  next(err)
+})
 
 // error handlers
 
@@ -46,23 +64,22 @@ app.use(function(req, res, next) {
 // will print stacktrace
 if (app.get('env') === 'development') {
   app.use(function(err, req, res, next) {
-    res.status(err.status || 500);
+    res.status(err.status || 500)
     res.render('error', {
       message: err.message,
       error: err
-    });
-  });
+    })
+  })
 }
 
 // production error handler
 // no stacktraces leaked to user
 app.use(function(err, req, res, next) {
-  res.status(err.status || 500);
+  res.status(err.status || 500)
   res.render('error', {
     message: err.message,
     error: {}
-  });
-});
+  })
+})
 
-
-module.exports = app;
+module.exports = app

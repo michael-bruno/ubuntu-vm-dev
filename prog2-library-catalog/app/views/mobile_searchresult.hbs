@@ -1,0 +1,43 @@
+<head> 
+	<meta name="viewport" content="width=device-width, initial-scale=1"> 
+	<link rel="stylesheet" href="jquery.mobile-1.0.1.min.css" />
+	<script src="jquery-1.6.4.min.js"></script>
+	<script src="jquery.mobile-1.0.1.min.js"></script>
+</head> 
+<body> 
+<section id="page1" data-role="page">
+  <header data-role="header">
+    <h1>Results</h1>
+    <a href="mobile_search" data-ajax="false">Search</a>
+  </header>
+  <div class="content" data-role="content">
+    <ul data-role="listview">
+      {{#each results}}
+          <li><a href='#b{{this.id}}'> {{this.title}} </a></li>
+      {{/each}}
+    </ul>
+  </div>
+  
+  <footer data-role="footer">
+     <a data-icon="arrow-l" data-role="button" href="mobile_searchresult?start={{#if first}}0{{else}}{{prev_page}}{{/if}}&title={{item_search}}" data-ajax="false">prev</a>
+     <a data-icon="arrow-r" data-role="button" href="mobile_searchresult?start={{#if no_next}}{{start}}{{else}}{{next_page}}{{/if}}&title={{item_search}}" data-ajax="false">next</a>
+  </footer>
+</section>
+
+{{#each results}}
+  <section id="b{{this.id}}" data-role="page">
+    <header data-role="header">
+      <h1>Details</h1>
+    </header>
+    <div class="content" >
+      <table>
+        <tr>&nbsp;</tr>
+        <tr><th>Call #:</th><td>{{this.callNo}}</td></tr>
+        <tr><th>Title:</th><td>{{this.title}}</td></tr>
+        <tr><th>Author:</th><td>{{author}}</td>
+      </table>
+    </div>
+  </section>
+{{/each}}
+
+
