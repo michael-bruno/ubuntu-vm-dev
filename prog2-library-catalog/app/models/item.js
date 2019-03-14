@@ -39,6 +39,7 @@ Item.SearchAll = function (callback) {
 
 Item.Search = function (title,start,callback) {
     db.pool.getConnection(function (err, connection) {
+        if (err) { connection.release(); return callback(err) }
         connection.query(`select id from items where title like ? order by title`,"%"+title+"%", function (err, data) {
     
             if (err) return callback(err)
