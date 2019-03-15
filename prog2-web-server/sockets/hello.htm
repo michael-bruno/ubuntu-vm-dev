@@ -1,0 +1,233 @@
+
+<html>    
+<body>
+    <div>
+        <textarea>
+### CpS 320 Lecture Notes
+
+C Memory Management
+===================
+
+------------------------------------------------------------------------
+
+
+Dynamic Memory Management
+-------------------------
+Sometimes you don't know how big an array should be until the program is already running.
+The classic way to handle scenarios like this in C is to use *dynamic memory allocation*
+via the standard library functions `malloc` and `free`.
+
+While `malloc` can be used to allocate memory for *any* purpose, it is very commonly
+used to allocate space for C strings that are too big for stack-allocation (i.e., for
+local arrays) or that are simply of unpredictable and/or growing size.
+
+Example:
+```c
+#include <stdio.h>
+#include <stdlib.h>     // Need this for malloc/free
+#include <bsd/string.h>
+
+int main() {
+    char *buff = malloc(256);   // Room for 255+1 char C string (uninitialized; random junk)
+
+    // malloc() returns NULL if it cannot allocate for some reason
+    if (buff == NULL) {
+        perror("unable to allocate buffer for example program");
+        exit(1);
+    }
+
+    strlcpy(buff, "hello, world!", 256);
+
+    printf("This is the message: '%s'\n", buff);
+
+    // What you malloc() you must also free()!
+    // (Valgrind is your friend...)
+    free(buff);
+
+    return 0;
+}
+```
+
+There is also `calloc`, a variant of `malloc` that zeros out the allocated memory for you.
+(Note that unlike `malloc` it takes 2 arguments: "size of element" and "number of elements".)
+
+There is also a handy function `memset` to help you manually zero out ranges of bytes in memory.
+
+Case Study: A Function with a Problem
+--------------------------------------
+
+```c
+// Read a line of text from STDIN and return a pointer to the resulting C string
+char *readline() {
+    char buffer[80];
+
+    // Use stdio library routine to read a line
+    // of text into <buffer> from STDIN
+    fgets(buffer, sizeof(buffer), stdin);
+
+    // Return pointer to <buffer>
+    return buffer;
+}
+```
+
+This function returns a pointer to *local, automatic data*. Since automatic data
+is destroyed when it goes out of scope (i.e., when the function returns),
+the pointer that is returned points to **memory that has been deallocated**
+and may be in use for some other purpose by the time that pointer is dereferenced.
+
+Although C lets you do this, most modern compilers issue a warning
+because this is **extremely dangerous** and almost without exception causes
+memory corruption and/or segfaults.
+
+Three Solutions
+---------------
+
+### Solution \#1: Return a pointer to static data
+
+```c
+// Read a line of text from STDIN and return a pointer to the resulting C string
+char *readline() {
+    static char buffer[80];
+
+    // Use stdio library routine to read a line
+    // of text into <buffer> from STDIN
+    fgets(buffer, sizeof(buffer), stdin);
+
+    // Return pointer to <buffer>
+    return buffer;
+}
+```
+
+This function returns a pointer to *local, static data*.  Although `buffer` is 
+not globally visible, its lifetime is *static* (i.e., unchanging, never dying),
+like a global variable, because it was marked `static`.
+
+Thus, it is now *safe* to return a pointer to this global data.  It may not be
+*smart*, however.  The caller must be careful not to call the function twice,
+like this:
+```c
+    char *first_name, *last_name;
+
+    first_name = readline();    // Points to <buffer> inside readline()
+  
+    last_name = readline();     // Oops--ALSO points to <buffer> inside readline()!
+
+    // Prints "last name" twice!
+    printf("Hello, %s %s!\n", first_name, last_name);
+```
+
+The correct way to use a function like this is to immediately copy the
+data into another buffer, like this:
+```c
+    char *line, first_name[64], last_name[64];
+   
+    // Read/copy a line of text into first_name 
+    line = readline();
+    strlcpy(first_name, line, sizeof(first_name));
+  
+    // Read/copy a line of text into last_name 
+    line = readline();
+    strlcpy(last_name, line, sizeof(last_name));
+
+    // Works as expected 
+    printf("Hello, %s %s!\n", first_name, last_name);
+```
+
+This approach was very common in the early days of Unix, C, and the C standard library.  **Note that it is NOT threadsafe!**
+
+### Solution \#2: Have the caller allocate the buffer
+
+```c
+// Read a line, up to <buffer_len> - 1 chars long, into <buffer>
+// from STDIN and return the address of <buffer>
+char *readline(char *buffer, size_t buffer_len) {
+    fgets(buffer, buffer_len, stdin);
+    return buffer;  // Return the caller's own buffer pointer for convenience
+}
+```
+
+Now, the function could be called like this:
+```c
+    char first_name[64], last_name[64];
+
+    // Demonstrate that we get the passed-in pointer back as the return value
+    printf("readline() -> '%s'\n", readline(first_name, sizeof(first_name)));
+    printf("readline() -> '%s'\n", readline(last_name, sizeof(last_name)));
+
+    printf("Hello, %s %s!\n", first_name, last_name);
+```
+
+or like this:
+
+```c
+    const size_t LENGTH = 256;
+    char *first_name = malloc(LENGTH);
+    char *last_name = malloc(LENGTH);
+
+    printf("readline() -> '%s'\n", readline(first_name, LENGTH));
+    printf("readline() -> '%s'\n", readline(last_name, LENGTH));
+
+    printf("Hello, %s %s!\n", first_name, last_name);
+
+    free(last_name);
+    free(first_name);
+```
+
+If the caller did not give us a big enough buffer (for whatever reason), we really ought to return some kind of indication of this fact (c.f. `strlcpy` and `strlcat`).
+
+
+### Solution \#3: Return dynamically allocated memory
+
+```c
+// Read a line, up to <max_len> - 1 chars long, 
+// from STDIN into a malloc()d buffer of <max_len> bytes.
+// Return address of malloc()d buffer (caller must free() it).
+char *readline(size_t max_len) {
+    char *buff = malloc(max_len);
+    if (buff) {
+        fgets(buff, max_len, stdin);
+    }
+    return buff;
+}
+```
+
+This solution works, but the caller now has to remember to free the buffer it gets:
+```c
+    char *first_name = readline(256);
+    char *last_name = readline(256);
+
+    printf("Hello, %s %s!\n", first_name, last_name);
+
+    free(last_name);
+    free(first_name);
+```
+
+The big advantage of this approach is not apparent from our example, because it is so simple.
+With some extra work, we could eliminate the `max_len` argument and have `readline` itself
+figure out how much memory to allocate to handle *any* line of input.  This change would
+make `readline` *very* attractive to callers, even if they have to remember to `free` the
+resulting buffer!
+
+### TL;DR
+
+There is no one "right" solution; there are tradeoffs:
+
+-   Solution 1:
+    -   Pros: very simple to write
+    -   Cons: messy to use (must make copies in many cases)
+    -   Verdict: OK if the caller is unlikely to call the function repeatedly; otherwise, avoid *(especially if multi-threaded code may call it!)*
+-   Solution 2:
+    -   Pros: simple to write, fewer "gotchas" for caller
+    -   Cons: still messy for caller (just as much work to use as solution 1)
+    -   Verdict: a valid approach in most cases, but ugly if the caller is uncertain
+        how much room is needed
+-   Solution 3:
+    -   Pros: a little more work to write, more convenient for caller
+    -   Cons: `malloc` is slower than a stack-allocated array,
+        plus a new gotcha for the caller (forgetting to free)
+    -   Verdict: a little more overhead than solution 2 (*must* `malloc` in every case),
+        but better in cases where the caller doesn't know how much room it needs to allocate
+        in advance
+
+    </body> 
+</html>
