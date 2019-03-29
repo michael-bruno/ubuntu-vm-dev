@@ -18,11 +18,20 @@
 
 #include "eznet.h"      // Custom networking library
 
+#include <stdbool.h>
 #include <bsd/string.h>
+#include <pthread.h>
+
+#include "utils.h"
 
 #define MAX_HEADERS 10
 
 const int BUFFSIZE = 256;
+
+enum BUFFSIZE
+{
+    PATH_SIZE = 256
+};
 
 typedef struct http_header {
     char *name;
@@ -44,33 +53,42 @@ typedef struct http_response {
     http_header_t headers[MAX_HEADERS];
 } http_response_t;
 
-// Generic log-to-stdout logging routine
-// Message format: "timestamp:pid:user-defined-message"
-void blog(const char *fmt, ...) {
-    // Convert user format string and variadic args into a fixed string buffer
-    char user_msg_buff[256];
-    va_list vargs;
-    va_start(vargs, fmt);
-    vsnprintf(user_msg_buff, sizeof(user_msg_buff), fmt, vargs);
-    va_end(vargs);
-
-    // Get the current time as a string
-    time_t t = time(NULL);
-    struct tm *tp = localtime(&t);
-    char timestamp[64];
-    strftime(timestamp, sizeof(timestamp), "%Y-%m-%d %H:%M:%S", tp);
-
-    // Print said string to STDOUT prefixed by our timestamp and pid indicators
-    printf("%s:%d:%s\n", timestamp, getpid(), user_msg_buff);
+// Signal handler
+void handler(int sig) {
+    if (sig == SIGPIPE) printf("\t[SIG] Connection broken: (%i)\n",sig);
 }
+
+// // Generic log-to-stdout logging routine
+// // Message format: "timestamp:pid:user-defined-message"
+// void blog(const char *fmt, ...) {
+//     // Convert user format string and variadic args into a fixed string buffer
+//     char user_msg_buff[256];
+//     va_list vargs;
+//     va_start(vargs, fmt);
+//     vsnprintf(user_msg_buff, sizeof(user_msg_buff), fmt, vargs);
+//     va_end(vargs);
+
+//     // Get the current time as a string
+//     time_t t = time(NULL);
+//     struct tm *tp = localtime(&t);
+//     char timestamp[64];
+//     strftime(timestamp, sizeof(timestamp), "%Y-%m-%d %H:%M:%S", tp);
+
+//     // Print said string to STDOUT prefixed by our timestamp and pid indicators
+//     printf("%s:%d:%s\n", timestamp, getpid(), user_msg_buff);
+// }
 
 // GLOBAL: settings structure instance
 struct settings {
     const char *bindhost;   // Hostname/IP address to bind/listen on
     const char *bindport;   // Portnumber (as a string) to bind/listen on
+    const char *root_directory;
+    int max_processes;
 } g_settings = {
     .bindhost = "localhost",    // Default: listen only on localhost interface
     .bindport = "5000",         // Default: listen on TCP port 5000
+    .root_directory = ".",
+    .max_processes = 5
 };
 
 // Parse commandline options and sets g_settings accordingly.
@@ -79,13 +97,23 @@ int parse_options(int argc, char * const argv[]) {
     int ret = -1; 
 
     char op;
-    while ((op = getopt(argc, argv, "h:p:")) > -1) {
+    while ((op = getopt(argc, argv, "h:p:r:w:")) > -1) {
         switch (op) {
             case 'h':
                 g_settings.bindhost = optarg;
                 break;
             case 'p':
                 g_settings.bindport = optarg;
+                break;
+            case 'r':
+                g_settings.root_directory = optarg;
+                break;
+            case 'w':
+                if (!atoi(optarg)) {
+                    printf("'%s' not a valid number of processes.\n",optarg);
+                    goto cleanup;
+                }
+                g_settings.max_processes = atoi(optarg);
                 break;
             default:
                 // Unexpected argument--abort parsing
@@ -134,7 +162,11 @@ int parseHttp(FILE *in, http_request_t **request)
     if (!strcmp(token,"GET") || !strcmp(token,"POST"))
     {
         req->verb = malloc(BUFFSIZE);
-        strlcpy(req->verb,token,BUFFSIZE);
+        if (!req->verb) { rc = -3; goto cleanup; }
+
+        int len = strlcpy(req->verb,token,BUFFSIZE);
+        if (len >= BUFFSIZE) rc = -2;
+
     }
     else { rc = -4; goto cleanup; }
 
@@ -143,9 +175,13 @@ int parseHttp(FILE *in, http_request_t **request)
     if (!token) { rc = -5; goto cleanup; }
 
     // check if '/' in path
-    if (strcspn(token,"/") == strlen(token)) { rc = -5; goto cleanup; }
+    if (strcspn(token,"/") == strlen(token) && strcspn(token,"\\") == strlen(token)) { rc = -5; goto cleanup; }
+
     req->path = malloc(BUFFSIZE);
-    strlcpy(req->path,token,BUFFSIZE);
+    if (!req->path) { rc = -3; goto cleanup; }
+
+    int len = strlcpy(req->path,token,BUFFSIZE);
+    if (len >= BUFFSIZE) rc = -2;
 
 //  Get request VERSION
     token = strtok_r(saveptr," ",&saveptr);
@@ -157,14 +193,17 @@ int parseHttp(FILE *in, http_request_t **request)
     if (!strcmp(token,"HTTP/1.0") || !strcmp(token,"HTTP/1.1"))
     {
         req->version = malloc(BUFFSIZE);
-        strlcpy(req->version,token,BUFFSIZE);
+        if (!req->version) { rc = -3; goto cleanup; }
+
+        int len = strlcpy(req->version,token,BUFFSIZE);
+        if (len >= BUFFSIZE) rc = -2;
     }
 
 //  Get request HEADERS
-    int inc = 0;
-    while(getline(&line, &size, in) >= 0)
+    int inc = 0, line_size;
+    while((line_size = getline(&line, &size, in)) > 0)
     {
-        if (!strcmp(line,"\r\n")) break;
+        if (!strcmp(line,"\r\n") || !strcmp(line,"\n")) break;
 
         char *lineptr = line;
 
@@ -181,10 +220,15 @@ int parseHttp(FILE *in, http_request_t **request)
         new_header->name = malloc(BUFFSIZE);
         new_header->value = malloc(BUFFSIZE);
 
-        strlcpy(new_header->name,name,BUFFSIZE);
-        strlcpy(new_header->value,value,BUFFSIZE);
+         if (!new_header->name || !new_header->value) { rc = -3; goto cleanup; }
+        
+        int len = (new_header->name,name,BUFFSIZE);
+        if (len >= BUFFSIZE) rc = -2;
 
-        if (inc <= MAX_HEADERS) req->headers[inc] = *new_header;
+        len = strlcpy(new_header->value,value,BUFFSIZE);
+        if (len >= BUFFSIZE) rc = -2;
+
+        if (inc < MAX_HEADERS) req->headers[inc] = *new_header;
 
         free(new_header);
         inc++;
@@ -196,9 +240,9 @@ int parseHttp(FILE *in, http_request_t **request)
 cleanup:
     free(line);
     *request = req;
+
     return rc;
 }
-
 
 // GLOBAL: flag indicating when to shut down server
 volatile bool server_running = false;
@@ -209,9 +253,42 @@ void sigint_handler(int signum) {
     server_running = false;
 }
 
+// Get file's extension.
+char *get_filename_ext(char *filename) {
+    char *dot = strrchr(filename, '.');
+    if (!dot || dot == filename) return "";
+    return dot + 1;
+}
+
+// Parses a filepath and determines proper content type.
+char *parse_content_type(char *path)
+{
+    char *ext = get_filename_ext(path);
+    //printf("EXT: {%s}\n",ext);
+
+    char *type = "application/octet-stream";
+
+    if (!strcmp(ext,"jpeg") || !strcmp(ext,"jpg")) type = "image/jpeg";
+    else if (!strcmp(ext,"html") || !strcmp(ext,"htm")) type = "text/html";
+    else if (!strcmp(ext,"gif")) type =  "image/gif";
+    else if (!strcmp(ext,"png")) type = "image/png";
+    else if (!strcmp(ext,"css")) type = "text/css";
+    else if (!strcmp(ext,"txt")) type = "text/plain";
+    return type;
+
+}
+
+// Mutex
+pthread_mutex_t num_lock;
+
+int NUM_CLIENTS = 0;
+
 // Connection handling logic: reads/echos lines of text until error/EOF,
 // then tears down connection.
-void handle_client(struct client_info *client) {
+void *handle_client(void *args) {
+
+    struct client_info *client = args;
+
     FILE *stream = NULL;
 
     // Wrap the socket file descriptor in a read/write FILE stream
@@ -224,15 +301,12 @@ void handle_client(struct client_info *client) {
         goto cleanup;
     }
  
-    // Echo all lines
     char *line = NULL;
     size_t len = 0u;
     ssize_t recd;
 
     http_request_t *request = NULL;
-    int result = 0;
-
-    result = parseHttp(stream,&request);
+    int result = parseHttp(stream,&request);
 
     // initialize response
     http_response_t response = {
@@ -241,83 +315,112 @@ void handle_client(struct client_info *client) {
         .num_headers = 0
     };
 
+    http_header_t content_type = {
+        .name = "Content-Type",
+        .value = "text/plain"
+    };
+
+    char *ERROR_MSG = malloc(BUFFSIZE);
+    if (!ERROR_MSG) { strcpy(ERROR_MSG, "Malloc failure.\n"); }
+
+    size_t size = 32u;
+    FILE *fd = NULL;
+
     switch (result) {
     case 1:
         response.status = "200 OK";
 
-        printf("Verb: %s\n", request->verb);
-        printf("Path: %s\n", request->path);
-        printf("Version: %s\n", request->version);
-        printf("\n%d header(s):\n", request->num_headers);
-        for (int i = 0; i < request->num_headers; ++i) {
-            printf("* %s is %s\n", request->headers[i].name, request->headers[i].value);
-        }
-        break;
-    case -1:
-        fprintf(stderr, "** ERROR: Illegal HTTP stream.\n");
-        break;
-    case -2:
-        fprintf(stderr, "** ERROR: I/O error while reading request.\n");
-        break;
-    case -3:
-        fprintf(stderr, "** ERROR: malloc failure.\n");
-        break;
-    case -4:
-        fprintf(stderr, "** ERROR: Illegal HTTP stream (Invalid verb)\n");
-        break;
-    case -5:
-        fprintf(stderr, "*** ERROR: Illegal HTTP stream (Invalid path)\n");
-        break;
-    case -6:
-        fprintf(stderr, "** ERROR: Illegal HTTP stream (Invalid version)\n");
-        break;
-    case -7:
-        fprintf(stderr, "** ERROR: Illegal HTTP stream (Invalid header)\n");
-        break;
-    default:
-        printf("Unexpected return code %d.\n", result);
-    }
+        //printf("REQUEST: {%s %s %s}\n",request->verb,request->path,request->version);
 
-    // DO STUFF
-    size_t size = 32u;
-    FILE *fd = NULL;
-    char *fline = NULL;
-
-    if (result == 1)
-    {
         char *path = malloc(BUFFSIZE);
+        if (!path) { strlcpy(ERROR_MSG, "Malloc failure.\n",BUFFSIZE); }
 
         // current directory
-        snprintf(path,BUFFSIZE,".%s",request->path);
-        //printf("PATH: {%s}\n",path);
-        fd = fopen(path, "r");
-        if (!fd) response.status = "404 Not Found";
+        int len = snprintf(path,BUFFSIZE,"%s%s",g_settings.root_directory,request->path);
+        if (len >= BUFFSIZE) response.status = "400 Bad Request";
 
+        //printf("PATH: {%s}\n",path);
+
+        fd = fopen(path, "r");
+
+        if (!fd)
+        {
+            content_type.value = "text/plain";
+            response.status = "404 Not Found";
+            strcpy(ERROR_MSG, "File not found.\n");
+        }
+        else { content_type.value = parse_content_type(path); }
         free(path);
+
+        break;
+    case -1:
+        strlcpy(ERROR_MSG, "Illegal HTTP stream\n",BUFFSIZE);
+        break;
+    case -2:
+        strlcpy(ERROR_MSG, "I/O error while reading request.\n",BUFFSIZE);
+        break;
+    case -3:
+        strlcpy(ERROR_MSG, "Malloc failure.\n",BUFFSIZE);
+        break;
+    case -4:
+        strlcpy(ERROR_MSG, "Illegal HTTP stream (Invalid verb)\n",BUFFSIZE);
+        break;
+    case -5:
+        strlcpy(ERROR_MSG, "Illegal HTTP stream (Invalid path)\n",BUFFSIZE);
+        break;
+    case -6:
+        strlcpy(ERROR_MSG, "Illegal HTTP stream (Invalid version)\n",BUFFSIZE);
+        break;
+    case -7:
+        strlcpy(ERROR_MSG, "Illegal HTTP stream (Invalid header)\n",BUFFSIZE);
+        break;
+    default:
+        strlcpy(ERROR_MSG, "Unexpected error..\n",BUFFSIZE);
     }
+    
+    response.headers[response.num_headers] = content_type; response.num_headers++;
+
+    //printf("VERSION: {%s}\n",response.version);
+    //printf("STATUS: {%s}\n",response.status);
 
     // put to stream
-    fprintf(stream,"%s %s\n",response.version,response.status);
+    int resp;
+    resp = fprintf(stream,"%s %s\n",response.version,response.status);
+    fflush(stream);
+
     for (int i = 0; i < response.num_headers; ++i) {
-        fprintf(stream,"%s: %s\n", response.headers[i].name, response.headers[i].value);
+        resp = fprintf(stream,"%s: %s\n", response.headers[i].name, response.headers[i].value);
     }
+    fflush(stream);
+
+    //puts("HEADERS");
+
+    char *fline = malloc(BUFFSIZE);
 
     fprintf(stream,"\r\n");
     if (fd) {
         int read;
-        while(read = getline(&fline, &size, fd) >= 0)
+        //while(read = getline(&fline, &size, fd) >= 0)
+        while(read = fread(fline,sizeof(char),BUFFSIZE,fd))
         {
-            fprintf(stream,"%s",fline);
+            //fprintf(stream,"%s",fline);
+            fwrite(fline,sizeof(char),BUFFSIZE,stream);
         }
         fclose(fd);
     }
+    else { fputs(ERROR_MSG,stream); }
+    free(fline);
 
 cleanup:
+    //puts("CLEANUP");
+
     // Shutdown this client
     for (int i = 0; i < request->num_headers; ++i) {
         free(request->headers[i].name);
         free(request->headers[i].value);
     }
+
+    free(ERROR_MSG);
 
     free(request->verb);
     free(request->path);    
@@ -325,20 +428,40 @@ cleanup:
     free(request);
 
     if (stream) fclose(stream);
-    destroy_client_info(client);
     free(line);
+
+    // destroy_client_info(args);
+
+    pthread_mutex_lock(&num_lock);
+    NUM_CLIENTS--;
+    pthread_mutex_unlock(&num_lock);
+
     printf("\tSession ended.\n");
 }
 
+
 int main(int argc, char **argv) {
     int ret = 1;
+
+    signal(SIGINT, handler);
+    signal(SIGTERM, handler);
+    signal(SIGPIPE, handler);
+
+    // Initialize thread pool
+    pthread_t THREADS[g_settings.max_processes];
+    for (int i = 0; i < g_settings.max_processes; i++)
+    {
+        pthread_t new_thread; THREADS[i] = new_thread;
+    }
+
+    pthread_mutex_init(&num_lock, NULL);
 
     // Network server/client context
     int server_sock = -1;
 
     // Handle our options
     if (parse_options(argc, argv)) {
-        printf("usage: %s [-p PORT] [-h HOSTNAME/IP]\n", argv[0]);
+        printf("usage: %s [-p PORT] [-h HOSTNAME/IP] [-r ROOT_DIRECTORY] [-w MAX_PROCESSES]\n", argv[0]);
         goto cleanup;
     }
 
@@ -363,15 +486,22 @@ int main(int argc, char **argv) {
     while (server_running) {
         struct client_info client;
 
+        //printf("\nTHREADS: {%i}\n",NUM_CLIENTS);
+
         // Wait for a connection on that socket
         if (wait_for_client(server_sock, &client)) {
             // Check to make sure our "failure" wasn't due to
             // a signal interrupting our accept(2) call; if
             // it was  "real" error, report it, but keep serving.
             if (errno != EINTR) { perror("unable to accept connection"); }
-        } else {
+        } else if (NUM_CLIENTS < g_settings.max_processes) {
             blog("connection from %s:%d", client.ip, client.port);
-            handle_client(&client); // Client gets cleaned up in here
+            // handle_client(&client); // Client gets cleaned up in here
+            pthread_create(&THREADS[NUM_CLIENTS],NULL,handle_client,(void *)&client);
+            destroy_client_info(&client);
+            NUM_CLIENTS++;
+        } else {
+            blog("connection refused (THREAD LIMIT REACHED)");
         }
     }
     ret = 0;
