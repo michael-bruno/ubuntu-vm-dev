@@ -26,11 +26,15 @@
 
 #define MAX_HEADERS 10
 
-const int BUFFSIZE = 256;
+//const int BUFFSIZE = 256;
 
 enum BUFFSIZE
 {
-    PATH_SIZE = 256
+    STR_SIZE = 50,
+    PATH_SIZE = 256,
+    HEADER_NAME = 50,
+    HEADER_VALUE = 50,
+    ERRSTR_SIZE = 100
 };
 
 typedef struct http_header {
@@ -161,11 +165,11 @@ int parseHttp(FILE *in, http_request_t **request)
 
     if (!strcmp(token,"GET") || !strcmp(token,"POST"))
     {
-        req->verb = malloc(BUFFSIZE);
+        req->verb = (char*)malloc(STR_SIZE);
         if (!req->verb) { rc = -3; goto cleanup; }
 
-        int len = strlcpy(req->verb,token,BUFFSIZE);
-        if (len >= BUFFSIZE) rc = -2;
+        int len = strlcpy(req->verb,token,STR_SIZE);
+        if (len >= STR_SIZE) rc = -2;
 
     }
     else { rc = -4; goto cleanup; }
@@ -177,11 +181,11 @@ int parseHttp(FILE *in, http_request_t **request)
     // check if '/' in path
     if (strcspn(token,"/") == strlen(token) && strcspn(token,"\\") == strlen(token)) { rc = -5; goto cleanup; }
 
-    req->path = malloc(BUFFSIZE);
+    req->path = (char*)malloc(PATH_SIZE);
     if (!req->path) { rc = -3; goto cleanup; }
 
-    int len = strlcpy(req->path,token,BUFFSIZE);
-    if (len >= BUFFSIZE) rc = -2;
+    int len = strlcpy(req->path,token,PATH_SIZE);
+    if (len >= PATH_SIZE) rc = -2;
 
 //  Get request VERSION
     token = strtok_r(saveptr," ",&saveptr);
@@ -192,11 +196,11 @@ int parseHttp(FILE *in, http_request_t **request)
     
     if (!strcmp(token,"HTTP/1.0") || !strcmp(token,"HTTP/1.1"))
     {
-        req->version = malloc(BUFFSIZE);
+        req->version = (char*)malloc(STR_SIZE);
         if (!req->version) { rc = -3; goto cleanup; }
 
-        int len = strlcpy(req->version,token,BUFFSIZE);
-        if (len >= BUFFSIZE) rc = -2;
+        int len = strlcpy(req->version,token,STR_SIZE);
+        if (len >= STR_SIZE) rc = -2;
     }
 
 //  Get request HEADERS
@@ -217,16 +221,16 @@ int parseHttp(FILE *in, http_request_t **request)
 
         http_header_t *new_header = malloc(sizeof(http_header_t));
 
-        new_header->name = malloc(BUFFSIZE);
-        new_header->value = malloc(BUFFSIZE);
+        new_header->name = (char*)malloc(HEADER_NAME);
+        new_header->value = (char*)malloc(HEADER_VALUE);
 
          if (!new_header->name || !new_header->value) { rc = -3; goto cleanup; }
         
-        int len = (new_header->name,name,BUFFSIZE);
-        if (len >= BUFFSIZE) rc = -2;
+        int len = (new_header->name,name,HEADER_NAME);
+        if (len >= HEADER_NAME) rc = -2;
 
-        len = strlcpy(new_header->value,value,BUFFSIZE);
-        if (len >= BUFFSIZE) rc = -2;
+        len = strlcpy(new_header->value,value,HEADER_VALUE);
+        if (len >= HEADER_VALUE) rc = -2;
 
         if (inc < MAX_HEADERS) req->headers[inc] = *new_header;
 
@@ -320,7 +324,7 @@ void *handle_client(void *args) {
         .value = "text/plain"
     };
 
-    char *ERROR_MSG = malloc(BUFFSIZE);
+    char *ERROR_MSG = (char*)malloc(ERRSTR_SIZE);
     if (!ERROR_MSG) { strcpy(ERROR_MSG, "Malloc failure.\n"); }
 
     size_t size = 32u;
@@ -332,12 +336,12 @@ void *handle_client(void *args) {
 
         //printf("REQUEST: {%s %s %s}\n",request->verb,request->path,request->version);
 
-        char *path = malloc(BUFFSIZE);
-        if (!path) { strlcpy(ERROR_MSG, "Malloc failure.\n",BUFFSIZE); }
+        char *path = (char*)malloc(PATH_SIZE);
+        if (!path) { strlcpy(ERROR_MSG, "Malloc failure.\n",ERRSTR_SIZE); }
 
         // current directory
-        int len = snprintf(path,BUFFSIZE,"%s%s",g_settings.root_directory,request->path);
-        if (len >= BUFFSIZE) response.status = "400 Bad Request";
+        int len = snprintf(path,PATH_SIZE,"%s%s",g_settings.root_directory,request->path);
+        if (len >= PATH_SIZE) response.status = "400 Bad Request";
 
         //printf("PATH: {%s}\n",path);
 
@@ -354,28 +358,28 @@ void *handle_client(void *args) {
 
         break;
     case -1:
-        strlcpy(ERROR_MSG, "Illegal HTTP stream\n",BUFFSIZE);
+        strlcpy(ERROR_MSG, "Illegal HTTP stream\n",ERRSTR_SIZE);
         break;
     case -2:
-        strlcpy(ERROR_MSG, "I/O error while reading request.\n",BUFFSIZE);
+        strlcpy(ERROR_MSG, "I/O error while reading request.\n",ERRSTR_SIZE);
         break;
     case -3:
-        strlcpy(ERROR_MSG, "Malloc failure.\n",BUFFSIZE);
+        strlcpy(ERROR_MSG, "Malloc failure.\n",ERRSTR_SIZE);
         break;
     case -4:
-        strlcpy(ERROR_MSG, "Illegal HTTP stream (Invalid verb)\n",BUFFSIZE);
+        strlcpy(ERROR_MSG, "Illegal HTTP stream (Invalid verb)\n",ERRSTR_SIZE);
         break;
     case -5:
-        strlcpy(ERROR_MSG, "Illegal HTTP stream (Invalid path)\n",BUFFSIZE);
+        strlcpy(ERROR_MSG, "Illegal HTTP stream (Invalid path)\n",ERRSTR_SIZE);
         break;
     case -6:
-        strlcpy(ERROR_MSG, "Illegal HTTP stream (Invalid version)\n",BUFFSIZE);
+        strlcpy(ERROR_MSG, "Illegal HTTP stream (Invalid version)\n",ERRSTR_SIZE);
         break;
     case -7:
-        strlcpy(ERROR_MSG, "Illegal HTTP stream (Invalid header)\n",BUFFSIZE);
+        strlcpy(ERROR_MSG, "Illegal HTTP stream (Invalid header)\n",ERRSTR_SIZE);
         break;
     default:
-        strlcpy(ERROR_MSG, "Unexpected error..\n",BUFFSIZE);
+        strlcpy(ERROR_MSG, "Unexpected error..\n",ERRSTR_SIZE);
     }
     
     response.headers[response.num_headers] = content_type; response.num_headers++;
@@ -395,16 +399,16 @@ void *handle_client(void *args) {
 
     //puts("HEADERS");
 
-    char *fline = malloc(BUFFSIZE);
+    char *fline = (char*)malloc(STR_SIZE);
 
     fprintf(stream,"\r\n");
     if (fd) {
         int read;
         //while(read = getline(&fline, &size, fd) >= 0)
-        while(read = fread(fline,sizeof(char),BUFFSIZE,fd))
+        while(read = fread(fline,sizeof(char),STR_SIZE,fd))
         {
             //fprintf(stream,"%s",fline);
-            fwrite(fline,sizeof(char),BUFFSIZE,stream);
+            fwrite(fline,sizeof(char),STR_SIZE,stream);
         }
         fclose(fd);
     }
