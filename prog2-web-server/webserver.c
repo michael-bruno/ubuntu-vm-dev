@@ -100,7 +100,7 @@ struct settings {
 int parse_options(int argc, char * const argv[]) {
     int ret = -1; 
 
-    char op;
+    int op;
     while ((op = getopt(argc, argv, "h:p:r:w:")) > -1) {
         switch (op) {
             case 'h':
