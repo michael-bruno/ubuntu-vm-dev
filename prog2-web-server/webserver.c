@@ -1,6 +1,6 @@
-/* Echo Server: an example usage of EzNet
- * (c) 2016, Bob Jones University
- */
+// File: webserver.c
+// Author: Michael Bruno
+// Date: 3/29/2019
 
 #define _GNU_SOURCE
 
