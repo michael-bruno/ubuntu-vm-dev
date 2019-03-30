@@ -30,7 +30,7 @@
 
 enum BUFFSIZE
 {
-    STR_SIZE = 50,
+    STR_SIZE = 100,
     PATH_SIZE = 256,
     HEADER_NAME = 50,
     HEADER_VALUE = 50,
@@ -165,7 +165,7 @@ int parseHttp(FILE *in, http_request_t **request)
 
     if (!strcmp(token,"GET") || !strcmp(token,"POST"))
     {
-        req->verb = (char*)malloc(STR_SIZE);
+        req->verb = malloc(STR_SIZE);
         if (!req->verb) { rc = -3; goto cleanup; }
 
         int len = strlcpy(req->verb,token,STR_SIZE);
@@ -181,7 +181,7 @@ int parseHttp(FILE *in, http_request_t **request)
     // check if '/' in path
     if (strcspn(token,"/") == strlen(token) && strcspn(token,"\\") == strlen(token)) { rc = -5; goto cleanup; }
 
-    req->path = (char*)malloc(PATH_SIZE);
+    req->path = malloc(PATH_SIZE);
     if (!req->path) { rc = -3; goto cleanup; }
 
     int len = strlcpy(req->path,token,PATH_SIZE);
@@ -196,7 +196,7 @@ int parseHttp(FILE *in, http_request_t **request)
     
     if (!strcmp(token,"HTTP/1.0") || !strcmp(token,"HTTP/1.1"))
     {
-        req->version = (char*)malloc(STR_SIZE);
+        req->version = malloc(STR_SIZE);
         if (!req->version) { rc = -3; goto cleanup; }
 
         int len = strlcpy(req->version,token,STR_SIZE);
@@ -221,8 +221,8 @@ int parseHttp(FILE *in, http_request_t **request)
 
         http_header_t *new_header = malloc(sizeof(http_header_t));
 
-        new_header->name = (char*)malloc(HEADER_NAME);
-        new_header->value = (char*)malloc(HEADER_VALUE);
+        new_header->name = malloc(HEADER_NAME);
+        new_header->value = malloc(HEADER_VALUE);
 
          if (!new_header->name || !new_header->value) { rc = -3; goto cleanup; }
         
@@ -324,7 +324,7 @@ void *handle_client(void *args) {
         .value = "text/plain"
     };
 
-    char *ERROR_MSG = (char*)malloc(ERRSTR_SIZE);
+    char *ERROR_MSG = malloc(ERRSTR_SIZE);
     if (!ERROR_MSG) { strcpy(ERROR_MSG, "Malloc failure.\n"); }
 
     size_t size = 32u;
@@ -336,7 +336,7 @@ void *handle_client(void *args) {
 
         //printf("REQUEST: {%s %s %s}\n",request->verb,request->path,request->version);
 
-        char *path = (char*)malloc(PATH_SIZE);
+        char *path = malloc(PATH_SIZE);
         if (!path) { strlcpy(ERROR_MSG, "Malloc failure.\n",ERRSTR_SIZE); }
 
         // current directory
@@ -399,7 +399,7 @@ void *handle_client(void *args) {
 
     //puts("HEADERS");
 
-    char *fline = (char*)malloc(STR_SIZE);
+    char *fline = malloc(STR_SIZE);
 
     fprintf(stream,"\r\n");
     if (fd) {
