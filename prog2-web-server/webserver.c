@@ -384,20 +384,19 @@ void *handle_client(void *args) {
     
     response.headers[response.num_headers] = content_type; response.num_headers++;
 
-    //printf("VERSION: {%s}\n",response.version);
-    //printf("STATUS: {%s}\n",response.status);
+    // printf("VERSION: {%s}\n",response.version);
+    // printf("STATUS: {%s}\n",response.status);
 
     // put to stream
     int resp;
     resp = fprintf(stream,"%s %s\n",response.version,response.status);
-    fflush(stream);
 
     for (int i = 0; i < response.num_headers; ++i) {
         resp = fprintf(stream,"%s: %s\n", response.headers[i].name, response.headers[i].value);
     }
     fflush(stream);
 
-    //puts("HEADERS");
+    // puts("HEADERS");
 
     char *fline = malloc(STR_SIZE);
 
@@ -416,7 +415,7 @@ void *handle_client(void *args) {
     free(fline);
 
 cleanup:
-    //puts("CLEANUP");
+    // puts("CLEANUP");
 
     // Shutdown this client
     for (int i = 0; i < request->num_headers; ++i) {
