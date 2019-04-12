@@ -13,7 +13,6 @@
 
 #include "utils.h"
 
-
 // Generic log-to-stdout logging routine
 // Message format: "timestamp:pid:user-defined-message"
 void blog(const char *fmt, ...) {
