@@ -5,4 +5,4 @@ eznet.o:
 utils.o:
 		gcc -c -g -fsanitize=address -Wall -Werror -DSHOW_LOG_ERROR utils.c
 clean:
-		rm eznet.o
+		rm eznet.o webserver

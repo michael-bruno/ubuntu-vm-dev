@@ -433,7 +433,7 @@ cleanup:
     if (stream) fclose(stream);
     free(line);
 
-    // destroy_client_info(args);
+    destroy_client_info(args);
 
     pthread_mutex_lock(&num_lock);
     NUM_CLIENTS--;
@@ -501,7 +501,7 @@ int main(int argc, char **argv) {
             blog("connection from %s:%d", client.ip, client.port);
             // handle_client(&client); // Client gets cleaned up in here
             pthread_create(&THREADS[NUM_CLIENTS],NULL,handle_client,(void *)&client);
-            destroy_client_info(&client);
+            //destroy_client_info(&client);
             NUM_CLIENTS++;
         } else {
             blog("connection refused (THREAD LIMIT REACHED)");
