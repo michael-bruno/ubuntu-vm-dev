@@ -32,7 +32,7 @@ class VoipDevice(object):
         self.in_call = False
 
         self.counter = 0
-        self.text = "None"
+        self.text = ""
 
         self.buffer = llist()
         self.devices = []
@@ -47,7 +47,7 @@ class VoipDevice(object):
             devices_list += f"|\t({index+1}): {handle} {pointer if index+1 == self.selected.value else ''}\n"
 
         return f"""|{"=" * VoipDevice.width}
-| VOIP DEVICE @ {gtime()}
+| VOIP DEVICE @ {gtime()} \t\t\t {self.text}
 |{"=" * VoipDevice.width}
 | [ESC]   - Exit        [Y] - Accept Call
 | [1-9]   - Select      [N] - Reject Call
@@ -55,7 +55,6 @@ class VoipDevice(object):
 |{"=" * VoipDevice.width}
 | Status:   {self.status}
 | Handle:   {self.handle}
-|
 |
 | Devices:
 {devices_list}
@@ -288,7 +287,6 @@ class VoipDevice(object):
 
         def parse_input(usr_input):
             usr_input = iput.convert(usr_input)
-            self.text = usr_input
 
             if usr_input == iput.cancel:
                 BROADCAST.sendto(f"{self.handle}@{ecmd.endcall.value} {icall.handle}".encode(), ("<broadcast>", BROADCAST_PORT))
@@ -301,26 +299,39 @@ class VoipDevice(object):
 
                     self.in_call = False
 
+        def capture_loop():
+            while self.in_call and icall.handle in self.devices:
+                numframes, write = CAPTURE.read()
+                STREAMING.sendto(write, (icall.your_ip, STREAMING_PORT))
+
+        def playback_loop():
+            while self.in_call and icall.handle in self.devices:
+                try:
+                    read = STREAMING.recv(SIZE_TO_RW)
+                    PLAYBACK.write(read)
+                    
+                except:
+                    pass
+
         with NonBlockingConsole() as nbc:
 
             self.busy = ecmd.incall
             self.in_call = True
 
+            cap_thread = threading.Thread(target=capture_loop,daemon=True)
+            cap_thread.start()
+
+            play_thread = threading.Thread(target=playback_loop,daemon=True)
+            play_thread.start()           
+
+            self.text = f"({icall.handle})*"
+
             while self.in_call and icall.handle in self.devices:
-                
                 parse_input(nbc.get_data())
 
                 self.set_status(f"{status.incall.value}")
-                numframes, write = CAPTURE.read()
                 
-                STREAMING.sendto(write, (icall.your_ip, STREAMING_PORT))
-
-                try:
-                    read = STREAMING.recv(SIZE_TO_RW)
-                    PLAYBACK.write(read)
-                except:
-                    pass
-
+            self.text = ""
             PYTTSX3.say(f"Call ended.")
             PYTTSX3.runAndWait()
             self.busy = ecmd.awaiting
