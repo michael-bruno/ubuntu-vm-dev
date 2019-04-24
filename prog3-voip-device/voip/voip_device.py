@@ -265,6 +265,14 @@ class VoipDevice(object):
                     self.InCall(cmd)
                     break
 
+                elif not cmd.processed and isinstance(cmd,InCall) and cmd.handle == self.get_dev:
+                    cmd.processed = True
+
+                    self.calling = False
+                    PYTTSX3.say(f"{cmd.handle} is not available.")
+                    PYTTSX3.runAndWait()
+                    break
+
             if usr_input == iput.cancel:
                 self.calling = False
 
