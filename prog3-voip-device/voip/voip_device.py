@@ -269,9 +269,6 @@ class VoipDevice(object):
                     cmd.processed = True
 
                     self.calling = False
-                    PYTTSX3.say(f"{cmd.handle} is not available.")
-                    PYTTSX3.runAndWait()
-                    break
 
             if usr_input == iput.cancel:
                 self.calling = False
