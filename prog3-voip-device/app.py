@@ -2,13 +2,12 @@ import sys
 
 from voip import VoipDevice
 
-if len(sys.argv) != 2:
-    print("Usage: python3 voip_app.py [device_handle] [clear]")
+if len(sys.argv) != 3:
+    print("Usage: python3 voip_app.py [device_handle] [ip]")
+    sys.exit()
 
-clear = True
 device_handle = sys.argv[1]
-if len(sys.argv) == 3:
-    clear = False
+ip_addr = sys.argv[2]
 
-device = VoipDevice(device_handle,clear)
+device = VoipDevice(device_handle,ip_addr)
 device.run()

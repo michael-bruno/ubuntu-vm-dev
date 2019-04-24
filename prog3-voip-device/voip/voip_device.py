@@ -13,8 +13,8 @@ class VoipDevice(object):
 
     width = 60
 
-    def __init__(self, handle,clear=1):
-        self.clear = bool(clear)
+    def __init__(self, handle,ip_addr):
+        self.ip_addr = ip_addr
 
         self.status = status.awaiting.value
         self.selected = iput.dev_
@@ -155,8 +155,8 @@ class VoipDevice(object):
 
     def background(self):
         while self.running:
-            if self.clear:
-                os.system('clear')
+
+            os.system('clear')
             print(self.display)
 
             self.counter += 1
@@ -178,7 +178,7 @@ class VoipDevice(object):
 
             # accept call
             if usr_input == iput.yes:
-                BROADCAST.sendto(f"{self.handle}@{ecmd.accept.value} {rcall.handle} {socket.gethostbyname(socket.gethostname())}".encode(), ("<broadcast>", BROADCAST_PORT))
+                BROADCAST.sendto(f"{self.handle}@{ecmd.accept.value} {rcall.handle} {self.ip_addr}".encode(), ("<broadcast>", BROADCAST_PORT))
 
                 self.recieving = False
 
