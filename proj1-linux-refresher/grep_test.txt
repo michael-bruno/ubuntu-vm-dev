@@ -1,0 +1,10 @@
+text file test                                                                      
+this is thing
+thing
+                                                                THIS LINE IS PRETTY LONG
+thing
+char is not capital
+line
+Char is capital
+line line
+end

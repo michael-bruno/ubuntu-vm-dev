@@ -14,17 +14,15 @@ int display_file(char *filename) {
 	FILE *fp = fopen(filename, "r");
 
 	if (fp == NULL) {
-    	printf("wcat: cannot open file\n");
+    	printf("%s\n","wcat: cannot open file");
     	exit(1);
 	}
 
-	char c = fgetc(fp); 
-    while (c != EOF) 
-    { 
-        printf("%c", c); 
-        c = fgetc(fp); 
-    } 
-  
+	char c; 
+    while ((c = fgetc(fp)) != EOF) {
+    	printf("%c", c);
+    }
+
     fclose(fp);
 
     printf("\n");
