@@ -1,7 +1,7 @@
 // File:	wzip.c
 // Author:	Michael Bruno
 // Descr:	Command-line utility to compress the contents of a file using 
-//			the run-length encoding (RLE) and output the compressed file to STDOUT.
+//			the run-length encoding scheme (RLE) and output the compressed file to STDOUT.
 
 #include <stdio.h> 
 #include <stdlib.h>
@@ -29,8 +29,6 @@ int zip_file(char *filename) {
     		fwrite(&counter,sizeof(int),1, stdout);
     		fputc(last_c, stdout);
 
-    		// printf("%i%c",counter,last_c);
-
     		counter = 0;
 		}
 
@@ -40,8 +38,6 @@ int zip_file(char *filename) {
 
 	fwrite(&counter,sizeof(int),1, stdout);
 	fputc(last_c, stdout);
-
-	// printf("%i%c",counter,last_c);
 
     fclose(fp);
 
