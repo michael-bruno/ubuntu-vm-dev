@@ -25,8 +25,6 @@ int display_file(char *filename) {
 
     fclose(fp);
 
-    printf("\n");
-
     return 0;
 }
 
