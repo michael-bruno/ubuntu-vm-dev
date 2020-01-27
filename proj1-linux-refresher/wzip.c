@@ -7,6 +7,28 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define MFILE ".temp"
+
+
+int concat_file(char *filename, FILE *mfile) {
+// Opens <filename> and concatenates contents to <mfile>.
+
+
+	FILE *fp = fopen(filename, "r");
+
+	if (fp == NULL) {
+    	printf("%s\n","wzip: cannot open file");
+    	exit(1);
+	}
+
+	char c;
+	while ((c = fgetc(fp)) != EOF) {
+    	fputc(c, mfile);
+	}
+
+	return 0;
+}
+
 
 int zip_file(char *filename) {
 // Opens <filename> and outputs compressed
@@ -52,9 +74,16 @@ int main(int argc, char *argv[]) {
 		exit(1);
 	}
 
+	FILE *mfile = fopen(MFILE, "w");
+
 	for (int i = 1; i < argc; i++) {
-		zip_file(argv[i]);
+		concat_file(argv[i],mfile);
 	}
+
+	fclose(mfile);
+	zip_file(MFILE);
+
+	remove(MFILE);
 
     return 0;
 }
