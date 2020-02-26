@@ -27,10 +27,13 @@ int main(int argc, char *argv[]) {
 
 	    char buff[max], eread[max];
 	    strncpy(buff, argv[i], strlen(argv[i]));
-	    
+
 		int result = write(fd, buff, strlen(buff));
 		read(fd, eread, strlen(buff));
 		puts(eread);
+
+		memset(buff,0,max);
+		memset(eread,0,max);
 	}
 
 	close(fd);

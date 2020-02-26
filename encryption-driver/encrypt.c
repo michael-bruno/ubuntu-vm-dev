@@ -134,14 +134,12 @@ ssize_t encrypt_read(struct file *filp, char *buf, size_t count, loff_t *f_pos) 
 
   copy_to_user(buf,filp->private_data + *f_pos,count);
 
-  *f_pos += count;
-
   return count; 
 }
 
 
 ssize_t encrypt_write(struct file *filp, const char *buf, size_t count, loff_t *f_pos) {
-	char data[MAX_STR];
+	char data[MAX_STR] = {0};
 	char *edat;
         
 	if (count > sizeof(data)) { 
@@ -155,8 +153,6 @@ ssize_t encrypt_write(struct file *filp, const char *buf, size_t count, loff_t *
 	edat = rotate_encrypt(data);
 
 	filp->private_data = edat;
-
-	*f_pos = 0;
 
 	return count;
 }
