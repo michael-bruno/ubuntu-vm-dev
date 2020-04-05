@@ -1,6 +1,7 @@
-
+#include <stdio.h>
 #include <assert.h>
 #include <ucontext.h>
+#include <stdlib.h>
 
 #include "ut_threads.h"
 
@@ -23,7 +24,9 @@ typedef struct {
  * Define the thread table
 * Thread ID's are indexes into this table
 */
+
 uthread_t thread[MAX_THREADS]; // the thread table
+char stack[MAX_THREADS][STACK_SIZE];
 
 int curThread; // the index of the currently executing thread
 
@@ -32,15 +35,16 @@ int ut_init(char *stackbuf) {
 	int i;
 
 	// setup stack pointers
-	for (i = 0; i < MAX_THREADS; ++i)
-	{
-		thread[i].context.uc_stack.ss_sp = stackbuf + i * STACK_SIZE;
+	for (i = 0; i < MAX_THREADS; ++i) {
+		thread[i].context.uc_stack.ss_sp = stack[i];
 		thread[i].context.uc_stack.ss_size = STACK_SIZE;
 	}
 
 	// initialize main thread
 	thread[0].status = THREAD_ALIVE;
 	curThread = 0;
+
+	return 0;
 }
 
 // Creates a thread with entry point set to <entry>
@@ -51,7 +55,7 @@ int ut_create(void (*entry)(int), int arg, int priority) {
 	// Find a slot in thread table whose status is THREAD_UNUSED
 
 	int idx;
-	for (int idx = 0; idx < MAX_THREADS; idx++) {
+	for (idx = 0; idx < MAX_THREADS; idx++) {
 		if (thread[idx].status == THREAD_UNUSED) goto found;
 	}
 
@@ -62,9 +66,22 @@ found:
 	// Otherwise, set the status of the slot to THREAD_ALIVE
 	// and initialize its context.
 	// Return the thread Id.
+
+	// printf("FOUND: %d\n", idx);
 	
 	thread[idx].status = THREAD_ALIVE;
-	makecontext(thread[idx].context, (void (*)(void)) entry, arg);
+
+	getcontext(&thread[idx].context);
+
+	// thread[idx].context.uc_stack.ss_size = STACK_SIZE;
+	// thread[idx].context.uc_stack.ss_sp = stack[idx];
+	// thread[idx].context.uc_link = NULL;
+
+	// printf("LINKED\n");
+
+	makecontext(&thread[idx].context, (void (*)(void)) entry, arg);
+
+	//printf("DONE\n");
 
 	return idx;
 }
@@ -74,8 +91,8 @@ void ut_yield() {
 
 	// find a thread that can run, using round robin scheduling; pick this one if no other thread can run
 
-	int nextThread = curThread + 1 % MAX_THREADS;
-	for (; nextThread < MAX_THREADS; nextThread + 1 % MAX_THREADS) {
+	int nextThread;
+	for (nextThread = curThread + 1 % MAX_THREADS; nextThread < MAX_THREADS; nextThread + 1 % MAX_THREADS) {
 		if (nextThread == curThread) break;
 		if (thread[nextThread].status == THREAD_ALIVE) goto switch_ctx;
 	}
@@ -87,7 +104,7 @@ switch_ctx:
 	// if no threads are ALIVE, exit the program.
 	// otherwise, return to continue running this thread.
 
-	swapcontext(thread[curThread].context, thread[nextThread].context);
+	swapcontext(&thread[curThread].context, &thread[nextThread].context);
 	curThread = nextThread;
 }
 
@@ -119,7 +136,7 @@ int ut_join(int threadId, int *status) {
 	int rc = -1;
 	if (thread[threadId].status == THREAD_ZOMBIE) {
 		thread[threadId].status = THREAD_UNUSED;
-		status = thread[threadId].exitValue;
+		*status = thread[threadId].exitValue;
 		rc = 0;
 	}
 
@@ -134,6 +151,8 @@ void ut_finish(int result) {
 
 	thread[curThread].exitValue = result;
 	thread[curThread].status = THREAD_ZOMBIE;
+
+	free(thread[curThread].context.uc_stack.ss_sp);
 
 	ut_yield();
 }

@@ -36,9 +36,8 @@ void func_c(int id){
     printf(" Should not get here! \n");
 }
 
-int main()
-{
-    char threadstackbuf[MAX_THREADS * STACK_SIZE];
+int main() {
+  char threadstackbuf[MAX_THREADS * STACK_SIZE];
     
   printf("User-level Threads Scheduler\n");
   setvbuf(stdout, 0, _IONBF, BUFSIZ);

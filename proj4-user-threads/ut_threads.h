@@ -1,6 +1,6 @@
 
-int ut_init();
-int ut_create(void (* entry)(int), int);
+int ut_init(char *);
+int ut_create(void (* entry)(int), int, int);
 void ut_yield();
 int ut_getid();
 void ut_finish(int);
