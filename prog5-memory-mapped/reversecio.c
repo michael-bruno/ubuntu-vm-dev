@@ -26,30 +26,34 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    int fd;
+    FILE *fd;
     char *fname = argv[1];
 
-    fd = open (fname, O_RDWR);
-    if(fd == -1){
+    if ((fd = fopen(fname, "r+")) == NULL) {
         fprintf(stderr, "[reversecio] Could not open file %s: %s\n", fname, strerror(errno));
         exit(1);  
     }
 
     int len = fsize(argv[1]);
 
-    char *p = mmap (0, len, PROT_WRITE, MAP_SHARED, fd, 0);
-    if (p == MAP_FAILED) {
-        printf("[reversecio] Could not map file %s: %s\n", fname, strerror(errno));
+    char *buffer;
+    if ((buffer = malloc(len)) == NULL) {
+        printf("[reversecio] Could not malloc %s: %s\n", fname, strerror(errno));
         exit(1); 
     }
 
+    fread(buffer, len,1,fd);
+
     for (int low=0, high=len-1; low < high; low++, high--) {
-        char temp = p[low];
-        p[low] = p[high];
-        p[high] = temp;
+        char temp = buffer[low];
+        buffer[low] = buffer[high];
+        buffer[high] = temp;
     }
 
-    munmap(p, len);
-    close (fd);
+    fseek(fd, 0, SEEK_SET);
+    fwrite(buffer, len,1,fd);
+
+    free(buffer);
+    fclose(fd);
   
 }
