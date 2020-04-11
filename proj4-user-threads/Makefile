@@ -1,11 +1,9 @@
 
-build: test.prog.c ut_threads.c
-	gcc -o ut_test test.prog.c ut_threads.c
-	gcc -o ct_test context_test.c ut_threads.c
+build: ut_threads.c test.prog.c
+	gcc -o test1 ut_threads.c test.prog.c
 
 test:
-	./ct_test
-	./ut_test
+	./test1
 
 clean:
-	rm ut_test
+	rm test1

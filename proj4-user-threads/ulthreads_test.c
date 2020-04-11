@@ -1,47 +1,39 @@
 #include <stdio.h>
 #include "ut_threads.h"
 
-void busywait(unsigned int n) {
+void busywait(unsigned int n)
+{
   for (; n > 0; n--)
         if (n % 100 == 0)
             ut_yield(); 
 }
 
-void func_a(int id) {
+int func_a(int id){
   int i = 0;
-  for( ; i <50; i++) {
+  for( ; i <50; i++){
     printf(" -=A%d=-\n", ut_getid());
     busywait(0x1FFFFF);
   }
-  ut_finish(id);
+  return id;
 }
 
-void func_b(int id) {
+int func_b(int id){
   int i = 0;
-  for( ; i <50; i++) {
+  for( ; i <50; i++){
     printf(" -=B%d=-\n", ut_getid());
     busywait(0x1FFFFF);
   }
-  ut_finish(id);
+  return id;
 }
 
-void func_c(int id) {
+void func_c(int id){
   int i = 0;
-  for( ; i <10; i++) {
+  for( ; i <10; i++){
     printf(" -=C%d=-\n", ut_getid());
     ut_yield();
   }
   ut_finish(id);
   printf(" Should not get here! \n");
-}
-
-void func_d(int id) {
-  int i = 0;
-  for( ; i <60; i++) {
-    printf(" -=D%d=-\n", ut_getid());
-    busywait(0x1FFFFF);
-  }
-  ut_finish(id);
 }
 
 int main() {
@@ -58,23 +50,19 @@ int main() {
   int thrA = ut_create(&func_a, 1979, 0);
   int thrB = ut_create(&func_b, 2008, 0);
   int thrC = ut_create(&func_c, 29, 0);
-  int thrD = ut_create(&func_d, 2008, 0);
   
-  int retA, retB, retC, retD;
+  int retA, retB, retC;
   
-  ut_join(thrC, &retC);
   ut_join(thrB, &retB);
   ut_join(thrA, &retA);
-  ut_join(thrD, &retD);
-
+  ut_join(thrC, &retC);
   
   printf("\n\n");
   printf("Thread A returned %d\n", retA);
   printf("Thread B returned %d\n", retB);
   printf("Thread C returned %d\n", retC);
-  printf("Thread D returned %d\n", retD);
   
-  printf("I`m also done ! Bye ...\n");
+  printf("I'm also done ! Bye ...\n");
 
   return 0;
 }
